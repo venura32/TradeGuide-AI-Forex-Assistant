@@ -10,6 +10,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
+from src.model import add_features as add_features_v2, train_model
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -152,10 +153,8 @@ def add_features(df):
 @st.cache_resource
 def train_models(df):
     features = [
-        'RSI', 'MACD', 'MACD_Signal', 'SMA_20', 'SMA_50',
-        'Volatility', 'Momentum', 'Return_1', 'Return_3',
-        'Return_5', 'Volatility_10', 'Volatility_20'
-    ]
+    'Returns', 'Momentum', 'Volatility', 'RSI', 'MACD', 'MACD_Signal'
+]
     X = df[features]
     y = df['Target']
     split_index = int(len(df) * 0.8)
@@ -163,11 +162,8 @@ def train_models(df):
     X_test = X.iloc[split_index:]
     y_train = y.iloc[:split_index]
     y_test = y.iloc[split_index:]
-    rf = RandomForestClassifier(n_estimators=100, random_state=42)
-    rf.fit(X_train, y_train)
+    rf, lr = train_model(X_train, y_train)
     rf_acc = accuracy_score(y_test, rf.predict(X_test))
-    lr = LogisticRegression(max_iter=1000)
-    lr.fit(X_train, y_train)
     lr_acc = accuracy_score(y_test, lr.predict(X_test))
     return rf, lr, rf_acc, lr_acc, features
 
@@ -200,7 +196,9 @@ def run_backtest(df, model, features, threshold=0.60):
 
 try:
     df_raw = load_data()
-    df = add_features(df_raw)
+    df = add_features_v2(df_raw)
+    df['SMA_20'] = df['Close'].rolling(20).mean()
+    df['SMA_50'] = df['Close'].rolling(50).mean()
     rf_model, lr_model, rf_acc, lr_acc, features = train_models(df)
 
     st.sidebar.header("Settings")
